@@ -21,6 +21,10 @@ Module.register("googlephotos",{
 		return ["googlephotos.css"]
 	},
 
+	getScripts: function() {
+		return ["googledrive.js"]
+	},
+
 	start: function() {
 		this.data.classes = 'bright medium';
 	},
