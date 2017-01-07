@@ -1,0 +1,29 @@
+{
+  "name": "mmm-google-photos",
+  "version": "1.0.0",
+  "description": "MagicMirror Module - Google Photos",
+  "main": "googlephotos.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smurftheweb/MMM-GooglePhotos.git"
+  },
+  "keywords": [
+    "magic mirror",
+    "module",
+    "google photos"
+  ],
+  "author": "smurftheweb@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/smurftheweb/MMM-GooglePhotos/issues"
+  },
+  "homepage": "https://github.com/smurftheweb/MMM-GooglePhotos#readme",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "googleapis": "^16.0.0",
+    "readline": "^1.3.0"
+  }
+}
