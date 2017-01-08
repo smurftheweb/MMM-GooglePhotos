@@ -39,7 +39,7 @@ module.exports = NodeHelper.create({
         // Authorize a client with the loaded credentials, then store it
         var golib = new GoogleLib(credentialsFile, tokenFile);
         var auth = golib.authorize();
-        console.log(auth);
+        this.log('Authenticated: ' + auth);
     },
 
     log: function(msg) {
