@@ -15,8 +15,7 @@ Module.register("googlephotos", {
         limitWidth: 320,
         limitHeight: 280,
         loadingText: "Loading...",
-        googlePhotosId: "",
-        lastPhotoId: ""
+        googlePhotosId: ""
     },
 
     getStyles: function() {
@@ -29,7 +28,8 @@ Module.register("googlephotos", {
 
     start: function() {
         this.data.classes = 'bright medium';
-
+        this.tokenFile = this.file('auth_token.json');
+        this.sendSocketNotification("GOOGLEPHOTOS_AUTHENTICATE", { tokenFile: this.tokenFile });
     },
 
     // Override dom generator.
