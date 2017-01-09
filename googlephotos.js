@@ -15,7 +15,7 @@ Module.register("googlephotos",{
         limitHeight: 280,
         limitWidth: 320,
         cacheFolder: 'cache/',
-		updateInterval: 60 * 1000, // every 1 minutes
+		updateInterval: 60 * 1000, // every 1 minutes, minimum time
 	},
 
 	// Define required scripts.
@@ -94,7 +94,7 @@ Module.register("googlephotos",{
     replaceImage: function(newImage) {
         console.log(this.image);
         if (this.image && this.image.length > 0) {
-            fs.unlink(this.image);
+            this.sendSocketNotification("DELETE_IMAGE", this.file(this.image));
         }
 
         if (newImage && newImage.length > 0) {

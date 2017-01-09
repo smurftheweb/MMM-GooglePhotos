@@ -38,7 +38,9 @@ module.exports = NodeHelper.create({
             this.config = payload;
         } else if (notification === "FETCH") {
 			this.startFetch();
-		} else {
+        } else if (notification === "DELETE_IMAGE") {
+            fs.unlink(payload);
+        } else {
             this.errorOccurred("Unrecognised notification in node_helper: " + notification);
         }
 	},
@@ -47,8 +49,7 @@ module.exports = NodeHelper.create({
 	startFetch() {
 		
         var self = this;
-        console.log("GooglePhotos - Starting fetching / Loading authentication");
-
+        console.log("GooglePhotos - Starting fetch");
 
         // If we do not have an authorized client already, setup one
         if (!self.oauth2Client || self.oauth2Client === undefined) {
