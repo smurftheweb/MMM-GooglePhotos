@@ -53,5 +53,5 @@ jspm_packages
 
 # End of https://www.gitignore.io/api/node
 
-client_id.json
-client_secret.json
+tokens/auth_token.json
+cache/**
