@@ -55,8 +55,6 @@ module.exports = NodeHelper.create({
         } else {
             self.getPhotoFolder(); //self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });    
         }
-
-		// this.scheduleNextFetch(this.config.updateInterval);
 	},
 
     getPhotoFolder: function() {
@@ -163,10 +161,12 @@ module.exports = NodeHelper.create({
 
     fetchCompleted: function(imageFile) {
         this.sendSocketNotification("NEW_IMAGE", { imageFile: imageFile }); 
+        this.scheduleNextFetch(this.config.updateInterval);
     },
 
     errorOccurred: function(err) {
         this.sendSocketNotification("ERROR", { message: err });
+        this.scheduleNextFetch(this.config.updateInterval);
     },
 
 	scheduleNextFetch: function(delay) {

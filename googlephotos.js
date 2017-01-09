@@ -15,7 +15,7 @@ Module.register("googlephotos",{
         limitHeight: 280,
         limitWidth: 320,
         cacheFolder: 'cache/',
-		updateInterval: 10 * 60 * 1000, // every 10 minutes
+		updateInterval: 60 * 1000, // every 1 minutes
 	},
 
 	// Define required scripts.
@@ -30,9 +30,6 @@ Module.register("googlephotos",{
         this.message = "Loading...";
         this.image = "";
 		this.loaded = true;
-        //this.scheduleUpdate(this.config.initialLoadDelay);
-		//this.updateTimer = null;
-
 	},
 
 	// Override dom generator.
