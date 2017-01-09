@@ -90,6 +90,11 @@ Module.register("googlephotos",{
             this.message = "";
             this.image = payload.imageFile;
             this.updateUI();
+        } else if (notification === "ERROR") {
+            this.message = payload.message;
+            this.image = "";
+            // TODO delete old image
+            this.updateUI();    
         }
 	},
 
