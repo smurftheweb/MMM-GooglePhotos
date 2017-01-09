@@ -11,7 +11,7 @@ Module.register("googlephotos",{
 
 	// Default module config.
 	defaults: {
-		tokenFolder: "tokens",
+        tokenFolder: 'tokens/',
 		updateInterval: 10 * 60 * 1000, // every 10 minutes
 	},
 
@@ -53,19 +53,29 @@ Module.register("googlephotos",{
 	notificationReceived: function(notification, payload, sender) {
 		Log.info("Notification received: " + notification);
         if (notification === "DOM_OBJECTS_CREATED") {
-			this.sendSocketNotification("FETCH", this.config);
+            Log.log("here0");
+            var tokens = {
+                tokenFile: this.file(this.config.tokenFolder + 'auth_token.json'),
+                secretFile: this.file(this.config.tokenFolder + 'client_secret.json')
+            };
+            Log.log("here1");
+            this.sendSocketNotification("TOKENS", tokens);
+            Log.log("here2");
+            this.sendSocketNotification("CONFIG", this.config);
+            this.sendSocketNotification("FETCH", {});
 			//this.hide(0,{lockString: self.identifier});
 		}
 	},
 
     socketNotificationReceived: function (notification, payload) {
         this.message = "Socket notification received";
-		if (notification === "NEW_IMAGE") {
-            Log.info("New image received");
-            this.message = "New image received";
-			//this.status = payload;
-			this.updateUI();
-		}
+        Log.info("Socket notification received");
+		// if (notification === "NEW_IMAGE") {
+        //     Log.info("New image received");
+        //     this.message = "New image received";
+		// 	//this.status = payload;
+		// 	this.updateUI();
+		// }
 	},
 
     updateUI: function() {

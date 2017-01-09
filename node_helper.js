@@ -4,24 +4,37 @@ module.exports = NodeHelper.create({
 
 	config: {},
 
+    tokenFile: '',
+    secretFile: '',
+
 	updateTimer: null,
 
 	start: function () {
-        console.log("GP node helper started");
+        console.log("GP node_helper started");
 	},
 
 	socketNotificationReceived: function (notification, payload) {
-		if (notification === "FETCH") {
+        console.log("GP node_helper notification: " + notification);
+        if (notification === "CONFIG") {
+            console.log("Config received");
+            this.config = payload;
+        } else if (notification === "TOKENS") {
+            console.log("Tokens received: %o", payload);
+            this.tokenFile = payload.tokenFile;
+            this.secretFile = payload.secretFile;
+        } else if (notification === "FETCH") {
             console.log("GP fetch received");
-			this.config = payload;
-			this.preformFetch();
-		}
+			this.performFetch();
+		} else {
+            console.log("Unrecognised notification: " + notification);
+        }
 	},
 
-	preformFetch() {
+	performFetch() {
 		var self = this;
 
         self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });
+        console.log("debug: " + this.config.tokenFolder);
         console.log("Message sent");
 		// simpleGits.forEach(function(sg) {
 		// 	sg.git.fetch().status(function(err, data) {
@@ -43,7 +56,7 @@ module.exports = NodeHelper.create({
 		var self = this;
 		clearTimeout(this.updateTimer);
 		this.updateTimer = setTimeout(function() {
-			self.preformFetch();
+			self.performFetch();
 		}, delay);
 	}
 
