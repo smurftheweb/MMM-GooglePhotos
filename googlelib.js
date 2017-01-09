@@ -16,11 +16,12 @@ var GoogleLib = function(credentialsFile, tokenFile) {
      *
      * @param {Object} credentials The authorization client credentials.
      */
-    this.authorize = function() {
+    this.authorize = function(authorisedCallback, errorCallback) {
 
         fs.readFile(credentialsFile, function processClientSecrets(err, content) {
             if (err) {
                 console.log('Error loading client secret file: ' + err);
+                errorCallback(err);
                 return;
             }
 
@@ -38,10 +39,11 @@ var GoogleLib = function(credentialsFile, tokenFile) {
             // Check if we have previously stored a token.
             fs.readFile(tokenFile, function(err, token) {
                 if (err) {
-                    return getNewToken(oauth2Client);
+                    var auth = getNewToken(oauth2Client);
+                    authorisedCallback(auth);
                 } else {
                     oauth2Client.credentials = JSON.parse(token);
-                    return oauth2Client;
+                    authorisedCallback(oauth2Client);
                 }
             });
         });

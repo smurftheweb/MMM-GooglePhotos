@@ -9,13 +9,17 @@
 
 Module.register("googlephotos", {
 
+    imageFile: "",
+    errorMessage: "",
+
     // Default module config.
     defaults: {
         img: 'test_img.jpg',
         limitWidth: 320,
         limitHeight: 280,
         loadingText: "Loading...",
-        googlePhotosId: ""
+        isAuthorised: false,
+
     },
 
     getStyles: function() {
@@ -32,9 +36,21 @@ Module.register("googlephotos", {
         this.sendSocketNotification("GOOGLEPHOTOS_AUTHENTICATE", { tokenFile: this.tokenFile });
     },
 
+    socketNotificationReceived: function(notification, payload) {
+        if (notification === "GOOGLEPHOTOS_ERR") {
+            console.log("GP Error: " + errorMessage);
+            errorMessage = payload;
+        }
+    },
+
     // Override dom generator.
     getDom: function() {
         var wrapper = document.createElement("div");
+
+        if (errorMessage.length() > 0) {
+            wrapper.innerText = "An error occurred: " + errorMessage;
+            return wrapper;
+        }
 
         var imgContainer = document.createElement("div");
         imgContainer.className = "gpcontainer";
