@@ -37,12 +37,12 @@ Module.register("googlephotos",{
 	// Override dom generator.
 	getDom: function() {
 		var wrapper = document.createElement("div");
-        console.log("Message: ", this.message);
 		if (this.message && this.message.length > 0) {
 			wrapper.innerHTML = this.message;
 			wrapper.className = "dimmed light small";
 			return wrapper;
-        } else if (this.image && this.image.length > 0) {
+        } 
+        else if (this.image && this.image.length > 0) {
             wrapper.innerHTML = "";
             wrapper.className = "dimmed light small";
 
@@ -52,11 +52,9 @@ Module.register("googlephotos",{
             var img = document.createElement("img");
             img.setAttribute("src", this.file(this.image));
             if (this.config.limitWidth > 0) {
-                Log.info("Limiting width");
                 img.style.maxWidth = this.config.limitWidth + "px";
             }
             if (this.config.limitHeight > 0) {
-                Log.info("Limiting height");
                 img.style.maxHeight = this.config.limitHeight + "px";
             }
 
@@ -66,7 +64,7 @@ Module.register("googlephotos",{
             return wrapper;
         }
 		
-        wrapper.innerHTML = "This is just a test for module: " + this.name + ".";
+        wrapper.innerHTML = "Unknown error in module: " + this.name + ".";
         wrapper.className = "dimmed light small";
         return wrapper;
 	},
@@ -82,20 +80,17 @@ Module.register("googlephotos",{
             this.sendSocketNotification("TOKENS", tokens);
             this.sendSocketNotification("CONFIG", this.config);
             this.sendSocketNotification("FETCH", {});
-			//this.hide(0,{lockString: self.identifier});
 		}
 	},
 
     socketNotificationReceived: function (notification, payload) {
-        this.message = "Socket notification received: " + notification;
         Log.info("Socket notification received: " + notification);
 		if (notification === "NEW_IMAGE") {
             Log.info("New image received: " + payload.imageFile);
             this.message = "";
             this.image = payload.imageFile;
+            this.updateUI();
         }
-        this.updateUI();
-		// }
 	},
 
     updateUI: function() {
