@@ -13,6 +13,7 @@ module.exports = NodeHelper.create({
 
     tokenFile: '',
     secretFile: '',
+    googlePhotosId: '',
 
 	updateTimer: null,
 
@@ -46,7 +47,7 @@ module.exports = NodeHelper.create({
             // Authorize a client with the loaded credentials, then store it
             self.glibAuthorize();
         } else {
-            self.fetchCompleted("test_img.jpg"); //self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });    
+            self.getPhotoFolder(); //self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });    
         }
 
         self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });
@@ -62,12 +63,23 @@ module.exports = NodeHelper.create({
 		// this.scheduleNextFetch(this.config.updateInterval);
 	},
 
-    fetchCompleted: function(imageFile) {
-        this.sendSocketNotification("NEW_IMAGE", { imageFile: imageFile }); 
+    getPhotoFolder: function() {
+        var self = this;
+
+        // Check if we have photos
+        if (self.googlePhotosId && self.googlePhotosId.length > 0) {
+            self.getRandomImage(self.googlePhotosId);        
+        } else {
+            self.glibFindPhotosFolder();
+        }
     },
 
-    isAuthenticated: function(auth) {
-        this.fetchCompleted("test_img.jpg");
+    getRandomImage: function() {
+        var self = this;
+    }
+
+    fetchCompleted: function(imageFile) {
+        this.sendSocketNotification("NEW_IMAGE", { imageFile: imageFile }); 
     },
 
     errorOccurred: function(err) {
@@ -87,6 +99,33 @@ module.exports = NodeHelper.create({
 	},
 
     /** GOOGLE LIBRARY STUFF BELOW HERE */
+    glibFindPhotosFolder: function() {
+        var self = this;
+        console.log("Find photo folder");
+        var service = google.drive('v3');
+
+        // find the google photos drive
+        service.files.list({
+            auth: self.oauth2Client,
+            pageSize: 100,
+            fields: "files(id, name)",
+            q: "name = 'Google Photos' and mimeType = 'application/vnd.google-apps.folder'"
+        }, function(err, response) {
+            if (err) {
+                console.log('The API returned an error: ' + err);
+                return;
+            }
+            var files = response.files;
+            if (files.length == 0) {
+                console.log('Photo folder not found.');
+                return;
+            } else {
+                self.googlePhotosId = files[0].id;
+                console.log('Photo folder found: ' + self.googlePhotosId);
+                return;
+            }
+        });
+    },
     /**
      * Create an OAuth2 client with the given credentials, and then execute the
      * given callback function.
@@ -114,11 +153,11 @@ module.exports = NodeHelper.create({
             // Check if we have previously stored a token.
             fs.readFile(self.tokenFile, function(err, token) {
                 if (err) {
-                    self.auth = glibGetNewToken(self.oauth2Client);
-                    self.errorOccurred("New token");
+                    self.auth = glibGetNewToken(self.oauth2Client); // TODO: Will this work, or should glibGetNewToken be calling self.getPhotoFolder?
+                    self.getPhotoFolder();
                 } else {
                     self.oauth2Client.credentials = JSON.parse(token);
-                    self.errorOccurred("Existing Token");
+                    self.getPhotoFolder();
                 }
             });
         });

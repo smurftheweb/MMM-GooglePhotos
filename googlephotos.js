@@ -14,6 +14,7 @@ Module.register("googlephotos",{
         tokenFolder: 'tokens/',
         limitHeight: 280,
         limitWidth: 320,
+        cacheFolder: 'cache/',
 		updateInterval: 10 * 60 * 1000, // every 10 minutes
 	},
 
