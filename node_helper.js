@@ -25,13 +25,11 @@ module.exports = NodeHelper.create({
             ],
 
 	start: function () {
-        console.log("GP node_helper started");
-	},
+    },
 
 	socketNotificationReceived: function (notification, payload) {
         var self = this;
 
-        console.log("GP node_helper notification: " + notification);
         if (notification === "PARAMS") {
             this.tokenFile = payload.tokenFile;
             this.secretFile = payload.secretFile;
@@ -39,26 +37,32 @@ module.exports = NodeHelper.create({
         } else if (notification === "CONFIG") {
             this.config = payload;
         } else if (notification === "FETCH") {
-            //this.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });
 			this.startFetch();
 		} else {
-            console.log("Unrecognised notification: " + notification);
+            this.errorOccurred("Unrecognised notification in node_helper: " + notification);
         }
 	},
 
+    // This function starts fetching images. 
 	startFetch() {
-		var self = this;
+		
+        var self = this;
+        console.log("GooglePhotos - Starting fetching / Loading authentication");
+
+
+        // If we do not have an authorized client already, setup one
         if (!self.oauth2Client || self.oauth2Client === undefined) {
-            console.log("GooglePhotos - loading authentication");
+
             // Authorize a client with the loaded credentials, then store it
-            self.glibAuthorize();
+            self.glibAuthorize(self.getPhotoFolder, self.errorOccurred);
         } else {
-            self.getPhotoFolder(); //self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });    
+            self.getPhotoFolder(self); //self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });    
         }
 	},
 
-    getPhotoFolder: function() {
-        var self = this;
+    // This function checks if we have the "Google Photos" folder ID, then passes on to
+    // findRandomImage if we do. Otherwise, it goes to find it.
+    getPhotoFolder: function(self) {
 
         // Check if we have photos
         if (self.googlePhotosId && self.googlePhotosId.length > 0) {
@@ -68,9 +72,10 @@ module.exports = NodeHelper.create({
         }
     },
 
+    // This function actually finds the google photo folder, and passes on to
+    // findRandomImage. We cache the folder id as we need it every time.
     findPhotosFolder: function() {
         var self = this;
-        console.log("Find photo folder");
         var service = google.drive('v3');
 
         // find the google photos drive
@@ -81,26 +86,25 @@ module.exports = NodeHelper.create({
             q: "name = 'Google Photos' and mimeType = 'application/vnd.google-apps.folder'"
         }, function(err, response) {
             if (err) {
-                console.log('The API returned an error: ' + err);
+                self.errorOccurred('The API returned an error: ' + err);
                 return;
             }
             var files = response.files;
             if (files.length == 0) {
-                console.log('Photo folder not found.');
+                self.errorOccurred('Photo folder not found.');
                 return;
             } else {
                 self.googlePhotosId = files[0].id;
-                console.log('Photo folder found: ' + self.googlePhotosId);
                 self.findRandomImage();
                 return;
             }
         });
     },
 
+    // Find a random image in google photos folder, and pass on to saveLatestImage.
     findRandomImage: function() {
         var self = this;
         var service = google.drive('v3');
-        console.log("Finding random photo");
 
         // Get a list of images and return one
         // TODO: Check for repeat
@@ -111,12 +115,12 @@ module.exports = NodeHelper.create({
             q: "mimeType contains 'image/' and '" + self.googlePhotosId + "' in parents"
         }, function(err, response) {
             if (err) {
-                console.log('The API returned an error: ' + err);
+                self.errorOccurred('The API returned an error: ' + err);
                 return;
             }
             var images = response.files;
             if (images.length == 0) {
-                console.log("No images found");
+                self.errorOccurred("No images found");
                 return;
             } else {
 
@@ -129,7 +133,6 @@ module.exports = NodeHelper.create({
                 // Update the last one
                 self.lastPhotoId = images[imgNum].id;
                 self.lastPhotoName = images[imgNum].name;
-                console.log("Found random image: " + self.lastPhotoName);
                 self.saveLatestImage();
             }
         });
@@ -142,18 +145,15 @@ module.exports = NodeHelper.create({
         // Get latest image then fetch completed
         // download the image TODO: Make sure these get deleted!
         var dest = fs.createWriteStream(self.cacheFolder + self.lastPhotoName);
-        console.log("About to download " + self.lastPhotoId);
         service.files.get({
                 auth: self.oauth2Client,
                 fileId: self.lastPhotoId,
                 alt: 'media'
             })
             .on('end', function() {
-                console.log('Image downloaded');
                 self.fetchCompleted(self.lastPhotoName);
             })
             .on('error', function(err) {
-                console.log('Failed to download image: ', err)
                 self.errorOccurred("Failed to download image: " + err);
             })
             .pipe(dest);
@@ -164,9 +164,10 @@ module.exports = NodeHelper.create({
         this.scheduleNextFetch(this.config.updateInterval);
     },
 
-    errorOccurred: function(err) {
-        this.sendSocketNotification("ERROR", { message: err });
-        this.scheduleNextFetch(this.config.updateInterval);
+    errorOccurred: function(err, self) {
+        var me = self || this;
+        me.sendSocketNotification("ERROR", { message: err });
+        me.scheduleNextFetch(this.config.updateInterval);
     },
 
 	scheduleNextFetch: function(delay) {
@@ -189,13 +190,12 @@ module.exports = NodeHelper.create({
      *
      * @param {Object} credentials The authorization client credentials.
      */
-    glibAuthorize: function() {
+    glibAuthorize: function(authorisedCallback, errorCallback) {
         var self = this;
 
         fs.readFile(self.secretFile, function processClientSecrets(err, content) {
             if (err) {
-                console.log('Error loading client secret file: ' + err);
-                errorOccurred(err);
+                errorCallback('Error loading client secret file: ' + err, self);
                 return;
             }
 
@@ -210,10 +210,10 @@ module.exports = NodeHelper.create({
             // Check if we have previously stored a token.
             fs.readFile(self.tokenFile, function(err, token) {
                 if (err) {
-                    self.auth = self.glibGetNewToken(self.oauth2Client);
+                    self.auth = self.glibGetNewToken(self.oauth2Client, authorisedCallback, errorCallback);
                 } else {
                     self.oauth2Client.credentials = JSON.parse(token);
-                    self.getPhotoFolder();
+                    authorisedCallback(self);
                 }
             });
         });
@@ -226,7 +226,7 @@ module.exports = NodeHelper.create({
      * @param {google.auth.OAuth2} oauth2Client The OAuth2 client to get token for.
      *     client.
      */
-    glibGetNewToken: function(oauth2Client) {
+    glibGetNewToken: function(oauth2Client, authorisedCallback, errorCallback) {
         var authUrl = oauth2Client.generateAuthUrl({
             access_type: 'offline',
             scope: this.SCOPES
@@ -241,13 +241,12 @@ module.exports = NodeHelper.create({
             oauth2Client.getToken(code, function(err, token) {
                 if (err) {
                     console.log('Error while trying to retrieve access token', err);
+                    errorCallback('Error while trying to retrieve access token: ' + err)
                     return;
                 }
                 oauth2Client.credentials = token;
-                console.log(token);
                 self.glibStoreToken(token);
-                console.log("self defined check");
-                self.getPhotoFolder();
+                authorisedCallback();
                 return oauth2Client;
             });
         });

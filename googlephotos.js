@@ -25,8 +25,6 @@ Module.register("googlephotos",{
 
 	// Define start sequence.
 	start: function() {
-		Log.info("Starting module: " + this.name);
-
         this.message = "Loading...";
         this.image = "";
 		this.loaded = true;
@@ -35,14 +33,14 @@ Module.register("googlephotos",{
 	// Override dom generator.
 	getDom: function() {
 		var wrapper = document.createElement("div");
+        wrapper.className = "dimmed light small";
+
 		if (this.message && this.message.length > 0) {
 			wrapper.innerHTML = this.message;
-			wrapper.className = "dimmed light small";
 			return wrapper;
         } 
         else if (this.image && this.image.length > 0) {
             wrapper.innerHTML = "";
-            wrapper.className = "dimmed light small";
 
             var imgContainer = document.createElement("div");
             imgContainer.className = "gpcontainer";
@@ -63,13 +61,11 @@ Module.register("googlephotos",{
         }
 		
         wrapper.innerHTML = "Unknown error in module: " + this.name + ".";
-        wrapper.className = "dimmed light small";
         return wrapper;
 	},
 
 	// Override notification handler.
 	notificationReceived: function(notification, payload, sender) {
-		Log.info("Notification received: " + notification);
         if (notification === "DOM_OBJECTS_CREATED") {
             var params = {
                 tokenFile: this.file(this.config.tokenFolder + 'auth_token.json'),
@@ -83,25 +79,33 @@ Module.register("googlephotos",{
 	},
 
     socketNotificationReceived: function (notification, payload) {
-        Log.info("Socket notification received: " + notification);
 		if (notification === "NEW_IMAGE") {
-            Log.info("New image received: " + payload.imageFile);
             this.message = "";
-            this.image = this.config.cacheFolder + payload.imageFile;
+            this.replaceImage(this.config.cacheFolder + payload.imageFile);
             this.updateUI();
         } else if (notification === "ERROR") {
+            Log.info(payload.message);
             this.message = payload.message;
-            this.image = "";
-            // TODO delete old image
+            this.replaceImage();
             this.updateUI();    
         }
 	},
 
+    replaceImage: function(newImage) {
+        console.log(this.image);
+        if (this.image && this.image.length > 0) {
+            fs.unlink(this.image);
+        }
+
+        if (newImage && newImage.length > 0) {
+            this.image = newImage;
+        } else {
+            this.image = "";
+        }
+    },
+
     updateUI: function() {
 		var self = this;
-		//if (this.status && this.status.behind > 0) {
         self.updateDom(0);
-		//	self.show(1000, {lockString: self.identifier});
-		//}
 	}
 });
