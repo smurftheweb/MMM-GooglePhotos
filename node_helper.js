@@ -11,9 +11,12 @@ module.exports = NodeHelper.create({
 
 	start: function () {
         console.log("GP node_helper started");
+        this.sendSocketNotification("HELLO", { message: "Hello!" });
 	},
 
 	socketNotificationReceived: function (notification, payload) {
+        var self = this;
+
         console.log("GP node_helper notification: " + notification);
         if (notification === "CONFIG") {
             console.log("Config received");
@@ -24,7 +27,8 @@ module.exports = NodeHelper.create({
             this.secretFile = payload.secretFile;
         } else if (notification === "FETCH") {
             console.log("GP fetch received");
-			this.performFetch();
+            this.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });
+			//this.performFetch();
 		} else {
             console.log("Unrecognised notification: " + notification);
         }
