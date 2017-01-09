@@ -14,10 +14,15 @@ module.exports = NodeHelper.create({
     tokenFile: '',
     secretFile: '',
     googlePhotosId: '',
+    cacheFolder: '',
+    lastPhotoId: '',
+    lastPhotoName: '',
 
 	updateTimer: null,
 
-    SCOPES: [ 'https://www.googleapis.com/auth/drive.metadata.readonly' ],
+    SCOPES: [ 'https://www.googleapis.com/auth/drive.metadata.readonly',
+              'https://www.googleapis.com/auth/drive.readonly'
+            ],
 
 	start: function () {
         console.log("GP node_helper started");
@@ -27,11 +32,12 @@ module.exports = NodeHelper.create({
         var self = this;
 
         console.log("GP node_helper notification: " + notification);
-        if (notification === "CONFIG") {
-            this.config = payload;
-        } else if (notification === "TOKENS") {
+        if (notification === "PARAMS") {
             this.tokenFile = payload.tokenFile;
             this.secretFile = payload.secretFile;
+            this.cacheFolder = payload.cacheFolder;
+        } else if (notification === "CONFIG") {
+            this.config = payload;
         } else if (notification === "FETCH") {
             //this.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });
 			this.startFetch();
@@ -50,16 +56,6 @@ module.exports = NodeHelper.create({
             self.getPhotoFolder(); //self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });    
         }
 
-        self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });
-		// simpleGits.forEach(function(sg) {
-		// 	sg.git.fetch().status(function(err, data) {
-		// 		data.module = sg.module;
-		// 		if (!err) {
-		// 			self.sendSocketNotification("STATUS", data);
-		// 		}
-		// 	});
-		// });
-
 		// this.scheduleNextFetch(this.config.updateInterval);
 	},
 
@@ -68,15 +64,102 @@ module.exports = NodeHelper.create({
 
         // Check if we have photos
         if (self.googlePhotosId && self.googlePhotosId.length > 0) {
-            self.getRandomImage(self.googlePhotosId);        
+            self.findRandomImage(self.googlePhotosId);        
         } else {
-            self.glibFindPhotosFolder();
+            self.findPhotosFolder();
         }
     },
 
-    getRandomImage: function() {
+    findPhotosFolder: function() {
         var self = this;
-    }
+        console.log("Find photo folder");
+        var service = google.drive('v3');
+
+        // find the google photos drive
+        service.files.list({
+            auth: self.oauth2Client,
+            pageSize: 1,
+            fields: "files(id, name)",
+            q: "name = 'Google Photos' and mimeType = 'application/vnd.google-apps.folder'"
+        }, function(err, response) {
+            if (err) {
+                console.log('The API returned an error: ' + err);
+                return;
+            }
+            var files = response.files;
+            if (files.length == 0) {
+                console.log('Photo folder not found.');
+                return;
+            } else {
+                self.googlePhotosId = files[0].id;
+                console.log('Photo folder found: ' + self.googlePhotosId);
+                self.findRandomImage();
+                return;
+            }
+        });
+    },
+
+    findRandomImage: function() {
+        var self = this;
+        var service = google.drive('v3');
+        console.log("Finding random photo");
+
+        // Get a list of images and return one
+        // TODO: Check for repeat
+        // Get the list of pictures
+        service.files.list({
+            auth: self.oauth2Client,
+            fields: "files(id, name)",
+            q: "mimeType contains 'image/' and '" + self.googlePhotosId + "' in parents"
+        }, function(err, response) {
+            if (err) {
+                console.log('The API returned an error: ' + err);
+                return;
+            }
+            var images = response.files;
+            if (images.length == 0) {
+                console.log("No images found");
+                return;
+            } else {
+
+                // Pick one at random (except last one)
+                var imgNum = -1;
+                do {
+                    imgNum = Math.floor(Math.random() * (images.length - 1));
+                } while (self.lastPhotoId == images[imgNum].id);
+
+                // Update the last one
+                self.lastPhotoId = images[imgNum].id;
+                self.lastPhotoName = images[imgNum].name;
+                console.log("Found random image: " + self.lastPhotoName);
+                self.saveLatestImage();
+            }
+        });
+    },
+
+    saveLatestImage: function() {
+        var self = this;
+        var service = google.drive('v3');
+
+        // Get latest image then fetch completed
+        // download the image TODO: Make sure these get deleted!
+        var dest = fs.createWriteStream(self.cacheFolder + self.lastPhotoName);
+        console.log("About to download " + self.lastPhotoId);
+        service.files.get({
+                auth: self.oauth2Client,
+                fileId: self.lastPhotoId,
+                alt: 'media'
+            })
+            .on('end', function() {
+                console.log('Image downloaded');
+                self.fetchCompleted(self.lastPhotoName);
+            })
+            .on('error', function(err) {
+                console.log('Failed to download image: ', err)
+                self.errorOccurred("Failed to download image: " + err);
+            })
+            .pipe(dest);
+    },
 
     fetchCompleted: function(imageFile) {
         this.sendSocketNotification("NEW_IMAGE", { imageFile: imageFile }); 
@@ -99,33 +182,7 @@ module.exports = NodeHelper.create({
 	},
 
     /** GOOGLE LIBRARY STUFF BELOW HERE */
-    glibFindPhotosFolder: function() {
-        var self = this;
-        console.log("Find photo folder");
-        var service = google.drive('v3');
-
-        // find the google photos drive
-        service.files.list({
-            auth: self.oauth2Client,
-            pageSize: 100,
-            fields: "files(id, name)",
-            q: "name = 'Google Photos' and mimeType = 'application/vnd.google-apps.folder'"
-        }, function(err, response) {
-            if (err) {
-                console.log('The API returned an error: ' + err);
-                return;
-            }
-            var files = response.files;
-            if (files.length == 0) {
-                console.log('Photo folder not found.');
-                return;
-            } else {
-                self.googlePhotosId = files[0].id;
-                console.log('Photo folder found: ' + self.googlePhotosId);
-                return;
-            }
-        });
-    },
+    
     /**
      * Create an OAuth2 client with the given credentials, and then execute the
      * given callback function.
@@ -153,8 +210,7 @@ module.exports = NodeHelper.create({
             // Check if we have previously stored a token.
             fs.readFile(self.tokenFile, function(err, token) {
                 if (err) {
-                    self.auth = glibGetNewToken(self.oauth2Client); // TODO: Will this work, or should glibGetNewToken be calling self.getPhotoFolder?
-                    self.getPhotoFolder();
+                    self.auth = self.glibGetNewToken(self.oauth2Client);
                 } else {
                     self.oauth2Client.credentials = JSON.parse(token);
                     self.getPhotoFolder();
@@ -188,7 +244,10 @@ module.exports = NodeHelper.create({
                     return;
                 }
                 oauth2Client.credentials = token;
-                glibStoreToken(token);
+                console.log(token);
+                self.glibStoreToken(token);
+                console.log("self defined check");
+                self.getPhotoFolder();
                 return oauth2Client;
             });
         });

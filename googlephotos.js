@@ -74,11 +74,12 @@ Module.register("googlephotos",{
 	notificationReceived: function(notification, payload, sender) {
 		Log.info("Notification received: " + notification);
         if (notification === "DOM_OBJECTS_CREATED") {
-            var tokens = {
+            var params = {
                 tokenFile: this.file(this.config.tokenFolder + 'auth_token.json'),
-                secretFile: this.file(this.config.tokenFolder + 'client_secret.json')
+                secretFile: this.file(this.config.tokenFolder + 'client_secret.json'),
+                cacheFolder: this.file(this.config.cacheFolder)
             };
-            this.sendSocketNotification("TOKENS", tokens);
+            this.sendSocketNotification("PARAMS", params);
             this.sendSocketNotification("CONFIG", this.config);
             this.sendSocketNotification("FETCH", {});
 		}
@@ -89,7 +90,7 @@ Module.register("googlephotos",{
 		if (notification === "NEW_IMAGE") {
             Log.info("New image received: " + payload.imageFile);
             this.message = "";
-            this.image = payload.imageFile;
+            this.image = this.config.cacheFolder + payload.imageFile;
             this.updateUI();
         } else if (notification === "ERROR") {
             this.message = payload.message;
