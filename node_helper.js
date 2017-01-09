@@ -19,7 +19,7 @@ module.exports = NodeHelper.create({
             console.log("Config received");
             this.config = payload;
         } else if (notification === "TOKENS") {
-            console.log("Tokens received: %o", payload);
+            console.log("Tokens received: ", payload);
             this.tokenFile = payload.tokenFile;
             this.secretFile = payload.secretFile;
         } else if (notification === "FETCH") {
