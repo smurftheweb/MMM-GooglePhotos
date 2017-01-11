@@ -7,7 +7,7 @@ var googleAuth = require('google-auth-library');
 
 module.exports = NodeHelper.create({
 
-	config: {},
+    config: {},
     auth: new googleAuth(),
     oauth2Client: undefined,
 
@@ -18,36 +18,42 @@ module.exports = NodeHelper.create({
     lastPhotoId: '',
     lastPhotoName: '',
 
-	updateTimer: null,
+    updateTimer: null,
 
-    SCOPES: [ 'https://www.googleapis.com/auth/drive.metadata.readonly',
-              'https://www.googleapis.com/auth/drive.readonly'
-            ],
+    SCOPES: ['https://www.googleapis.com/auth/drive.metadata.readonly',
+        'https://www.googleapis.com/auth/drive.readonly'
+    ],
 
-	start: function () {
-    },
+    start: function() {},
 
-	socketNotificationReceived: function (notification, payload) {
+    socketNotificationReceived: function(notification, payload) {
         var self = this;
 
         if (notification === "PARAMS") {
             this.tokenFile = payload.tokenFile;
             this.secretFile = payload.secretFile;
             this.cacheFolder = payload.cacheFolder;
+            this.createCacheFolder();
         } else if (notification === "CONFIG") {
             this.config = payload;
         } else if (notification === "FETCH") {
-			this.startFetch();
+            this.startFetch();
         } else if (notification === "DELETE_IMAGE") {
             fs.unlink(payload);
         } else {
             this.errorOccurred("Unrecognised notification in node_helper: " + notification);
         }
-	},
+    },
+
+    createCacheFolder() {
+        fs.access(this.cacheFolder, fs.constants.F_OK, (err) => {
+            if (err) { fs.mkdir(this.cacheFolder); }
+        });
+    },
 
     // This function starts fetching images. 
-	startFetch() {
-		
+    startFetch() {
+
         var self = this;
         console.log("GooglePhotos - Starting fetch");
 
@@ -59,7 +65,7 @@ module.exports = NodeHelper.create({
         } else {
             self.getPhotoFolder(self); //self.sendSocketNotification("NEW_IMAGE", { imageFile: "test_img.jpg" });    
         }
-	},
+    },
 
     // This function checks if we have the "Google Photos" folder ID, then passes on to
     // findRandomImage if we do. Otherwise, it goes to find it.
@@ -67,7 +73,7 @@ module.exports = NodeHelper.create({
 
         // Check if we have photos
         if (self.googlePhotosId && self.googlePhotosId.length > 0) {
-            self.findRandomImage(self.googlePhotosId);        
+            self.findRandomImage(self.googlePhotosId);
         } else {
             self.findPhotosFolder();
         }
@@ -161,7 +167,7 @@ module.exports = NodeHelper.create({
     },
 
     fetchCompleted: function(imageFile) {
-        this.sendSocketNotification("NEW_IMAGE", { imageFile: imageFile }); 
+        this.sendSocketNotification("NEW_IMAGE", { imageFile: imageFile });
         this.scheduleNextFetch(this.config.updateInterval);
     },
 
@@ -171,20 +177,20 @@ module.exports = NodeHelper.create({
         me.scheduleNextFetch(this.config.updateInterval);
     },
 
-	scheduleNextFetch: function(delay) {
-		if (delay < 60 * 1000) {
-			delay = 60 * 1000
-		}
+    scheduleNextFetch: function(delay) {
+        if (delay < 60 * 1000) {
+            delay = 60 * 1000
+        }
 
-		var self = this;
-		clearTimeout(this.updateTimer);
-		this.updateTimer = setTimeout(function() {
-			self.startFetch();
-		}, delay);
-	},
+        var self = this;
+        clearTimeout(this.updateTimer);
+        this.updateTimer = setTimeout(function() {
+            self.startFetch();
+        }, delay);
+    },
 
     /** GOOGLE LIBRARY STUFF BELOW HERE */
-    
+
     /**
      * Create an OAuth2 client with the given credentials, and then execute the
      * given callback function.
