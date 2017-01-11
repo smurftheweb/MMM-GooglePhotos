@@ -1,74 +1,111 @@
 /* global Module */
 
 /* Magic Mirror
- * Module: HelloWorld
+ * Module: MMM-GooglePhotos
  *
- * By Michael Teeuw http://michaelteeuw.nl
+ * By smurftheweb@gmail.com
  * MIT Licensed.
  */
 
-Module.register("googlephotos", {
+Module.register("googlephotos",{
 
-    imageFile: "",
-    errorMessage: "",
-
-    // Default module config.
-    defaults: {
-        img: 'test_img.jpg',
-        limitWidth: 320,
+	// Default module config.
+	defaults: {
+        tokenFolder: 'tokens/',
         limitHeight: 280,
-        loadingText: "Loading...",
-        isAuthorised: false,
+        limitWidth: 320,
+        cacheFolder: 'cache/',
+		updateInterval: 60 * 1000, // every 1 minutes, minimum time
+	},
 
-    },
+	// Define required scripts.
+	getStyles: function() {
+		return ["googlephotos.css"];
+	},
 
-    getStyles: function() {
-        return ["googlephotos.css"]
-    },
+	// Define start sequence.
+	start: function() {
+        this.message = "Loading...";
+        this.image = "";
+		this.loaded = true;
+	},
 
-    //getScripts: function() {
-    //    return ["googlelibs.js"]
-    //},
+	// Override dom generator.
+	getDom: function() {
+		var wrapper = document.createElement("div");
+        wrapper.className = "dimmed light small";
 
-    start: function() {
-        this.data.classes = 'bright medium';
-        this.tokenFile = this.file('auth_token.json');
-        this.sendSocketNotification("GOOGLEPHOTOS_AUTHENTICATE", { tokenFile: this.tokenFile });
-    },
+		if (this.message && this.message.length > 0) {
+			wrapper.innerHTML = this.message;
+			return wrapper;
+        } 
+        else if (this.image && this.image.length > 0) {
+            wrapper.innerHTML = "";
 
-    socketNotificationReceived: function(notification, payload) {
-        if (notification === "GOOGLEPHOTOS_ERR") {
-            console.log("GP Error: " + errorMessage);
-            errorMessage = payload;
-        }
-    },
+            var imgContainer = document.createElement("div");
+            imgContainer.className = "gpcontainer";
 
-    // Override dom generator.
-    getDom: function() {
-        var wrapper = document.createElement("div");
+            var img = document.createElement("img");
+            img.setAttribute("src", this.file(this.image));
+            if (this.config.limitWidth > 0) {
+                img.style.maxWidth = this.config.limitWidth + "px";
+            }
+            if (this.config.limitHeight > 0) {
+                img.style.maxHeight = this.config.limitHeight + "px";
+            }
 
-        if (errorMessage.length() > 0) {
-            wrapper.innerText = "An error occurred: " + errorMessage;
+            imgContainer.appendChild(img);
+
+            wrapper.appendChild(imgContainer);
             return wrapper;
         }
-
-        var imgContainer = document.createElement("div");
-        imgContainer.className = "gpcontainer";
-
-        var img = document.createElement("img");
-        img.setAttribute("src", this.file(this.config.img));
-        if (this.config.limitWidth > 0) {
-            Log.info("Limiting width");
-            img.style.maxWidth = this.config.limitWidth + "px";
-        }
-        if (this.config.limitHeight > 0) {
-            Log.info("Limiting height");
-            img.style.maxHeight = this.config.limitHeight + "px";
-        }
-
-        imgContainer.appendChild(img);
-
-        wrapper.appendChild(imgContainer);
+		
+        wrapper.innerHTML = "Unknown error in module: " + this.name + ".";
         return wrapper;
-    }
+	},
+
+	// Override notification handler.
+	notificationReceived: function(notification, payload, sender) {
+        if (notification === "DOM_OBJECTS_CREATED") {
+            var params = {
+                tokenFile: this.file(this.config.tokenFolder + 'auth_token.json'),
+                secretFile: this.file(this.config.tokenFolder + 'client_secret.json'),
+                cacheFolder: this.file(this.config.cacheFolder)
+            };
+            this.sendSocketNotification("PARAMS", params);
+            this.sendSocketNotification("CONFIG", this.config);
+            this.sendSocketNotification("FETCH", {});
+		}
+	},
+
+    socketNotificationReceived: function (notification, payload) {
+		if (notification === "NEW_IMAGE") {
+            this.message = "";
+            this.replaceImage(this.config.cacheFolder + payload.imageFile);
+            this.updateUI();
+        } else if (notification === "ERROR") {
+            Log.info(payload.message);
+            this.message = payload.message;
+            this.replaceImage();
+            this.updateUI();    
+        }
+	},
+
+    replaceImage: function(newImage) {
+        console.log(this.image);
+        if (this.image && this.image.length > 0) {
+            this.sendSocketNotification("DELETE_IMAGE", this.file(this.image));
+        }
+
+        if (newImage && newImage.length > 0) {
+            this.image = newImage;
+        } else {
+            this.image = "";
+        }
+    },
+
+    updateUI: function() {
+		var self = this;
+        self.updateDom(0);
+	}
 });
