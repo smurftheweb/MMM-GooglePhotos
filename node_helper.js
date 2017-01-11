@@ -119,6 +119,7 @@ module.exports = NodeHelper.create({
         service.files.list({
             auth: self.oauth2Client,
             fields: "files(id, name)",
+            pageSize: 1000,
             q: "mimeType contains 'image/' and '" + self.googlePhotosId + "' in parents"
         }, function(err, response) {
             if (err) {
@@ -130,7 +131,7 @@ module.exports = NodeHelper.create({
                 self.errorOccurred("No images found");
                 return;
             } else {
-
+                console.log("API retrieved " + images.length + " images");
                 // Pick one at random (except last one)
                 var imgNum = -1;
                 do {
