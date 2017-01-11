@@ -4,6 +4,7 @@ var fs = require('fs');
 var readline = require('readline');
 var google = require('googleapis');
 var googleAuth = require('google-auth-library');
+var moment = require('moment');
 
 module.exports = NodeHelper.create({
 
@@ -17,6 +18,9 @@ module.exports = NodeHelper.create({
     cacheFolder: '',
     lastPhotoId: '',
     lastPhotoName: '',
+
+    imageList: [],
+    lastFetchTime: moment(),
 
     updateTimer: null,
 
@@ -115,6 +119,13 @@ module.exports = NodeHelper.create({
 
         // Get a list of images and return one
         // TODO: Check for repeat
+        // Only update cache once an hour
+        var diffTime = moment().diff(self.lastFetchTime, 'minutes');
+        console.log("Diff time on list cache: " + diffTime);
+        if (self.lastFetchTime == null || diffTime > self.config.fetchCacheTime) {
+            console.log("Refreshing file list");
+        }
+
         // Get the list of pictures
         service.files.list({
             auth: self.oauth2Client,
